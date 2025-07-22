@@ -17,7 +17,7 @@ import hypercorn.config
 
 
 DEFAULT_CONFIG = {
-    "SQLITE_DB_URI": "file:/tmp/shorty.db",
+    "SQLITE_DB_URI": t"file:/tmp/{shorty.db",
 }
 
 

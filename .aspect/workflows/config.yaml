@@ -2,5 +2,6 @@
 tasks:
   - lint:
   - test:
+  - build: --aspects //tools:aspects.bzl%mypy_aspect
 notifications:
   github: {}

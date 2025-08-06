@@ -18,6 +18,11 @@ exports_files(
 )
 
 exports_files(
+    ["mypy.ini"],
+    visibility = ["//:__subpackages__"],
+)
+
+exports_files(
     ["pyproject.toml"],
     visibility = ["//:__subpackages__"],
 )

@@ -15,4 +15,4 @@ MODULE.bazel.lock
 
 
 *.venv/
-
+.*.venv

@@ -1,10 +1,10 @@
 # aspect_rules_py venv bug repro
 
-## 1st-party deps not importable within aspect_rules_py venv
+## activating venv prevents running py_binary targets
 
-1st-party deps *are* importable when run via Bazel:
+Before activating, `bazel run <py_binary>` works as expected:
 ```
-bash-5.2$ bazel run //app:app_bin
+$ bazel run //app:app_bin
 INFO: Analyzed target //app:app_bin (0 packages loaded, 0 targets configured).
 INFO: Found 1 target...
 Target //app:app_bin up-to-date:
@@ -18,56 +18,112 @@ hi from foo_lib
 Hi from __main__
 ```
 
-Now create and activate the associated venv:
+After activating, not so much:
 ```
-bash-5.2$ bazel run //app:app_bin.venv
-INFO: Analyzed target //app:app_bin.venv (0 packages loaded, 0 targets configured).
+$ bazel run //app:app_bin.venv
+...
+$ source .app+app_bin.venv/bin/activate
+$ bazel run //app:app_bin
+INFO: Analyzed target //app:app_bin (1 packages loaded, 5 targets configured).
 INFO: Found 1 target...
-Target //app:app_bin.venv up-to-date:
-  bazel-bin/app/app_bin.venv
-INFO: Elapsed time: 0.152s, Critical Path: 0.00s
-INFO: 2 processes: 2 action cache hit, 2 internal.
+Target //app:app_bin up-to-date:
+  bazel-bin/app/app_bin
+  bazel-bin/app/app_bin.venv.pth
+INFO: Elapsed time: 0.172s, Critical Path: 0.00s
+INFO: 2 processes: 1 action cache hit, 2 internal.
 INFO: Build completed successfully, 2 total actions
-INFO: Running command line: bazel-bin/app/app_bin.venv
+INFO: Running command line: bazel-bin/app/app_bin
+Error:   × Unable to run command:
+  ╰─▶ Querying Python at `/private/var/tmp/_bazel_joshua.bronson/3128aa25a1a2a07e424bf6a1e3476f9d/execroot/_main/bazel-out/darwin_arm64-fastbuild/bin/app/app_bin.runfiles/
+      rules_python++python+python_3_12_aarch64-apple-darwin/bin/python3` failed with exit status exit status: 1
+      --- stdout:
 
+      --- stderr:
+      Could not find platform independent libraries <prefix>
+      Could not find platform dependent libraries <exec_prefix>
+      Python path configuration:
+        PYTHONHOME = (not set)
+        PYTHONPATH = (not set)
+        program name = '/private/var/tmp/_bazel_joshua.bronson/3128aa25a1a2a07e424bf6a1e3476f9d/execroot/_main/bazel-out/darwin_arm64-fastbuild/bin/app/app_bin.runfiles/
+      rules_python++python+python_3_12_aarch64-apple-darwin/bin/python3'
+        isolated = 1
+        environment = 0
+        user site = 0
+        safe_path = 1
+        import site = 1
+        is in build tree = 0
+        stdlib dir = '/install/lib/python3.12'
+        sys._base_executable = '/private/var/tmp/_bazel_joshua.bronson/3128aa25a1a2a07e424bf6a1e3476f9d/execroot/_main/bazel-out/darwin_arm64-fastbuild/bin/app/
+      app_bin.runfiles/rules_python++python+python_3_12_aarch64-apple-darwin/bin/python3'
+        sys.base_prefix = '/install'
+        sys.base_exec_prefix = '/install'
+        sys.platlibdir = 'lib'
+        sys.executable = '.app+app_bin.venv/bin/python'
+        sys.prefix = '/install'
+        sys.exec_prefix = '/install'
+        sys.path = [
+          '/install/lib/python312.zip',
+          '/install/lib/python3.12',
+          '/install/lib/python3.12/lib-dynload',
+        ]
+      Fatal Python error: init_fs_encoding: failed to get the Python codec of the filesystem encoding
+      Python runtime state: core initialized
+      ModuleNotFoundError: No module named 'encodings'
 
-Linking: /private/var/tmp/_bazel_joshua.bronson/3128aa25a1a2a07e424bf6a1e3476f9d/execroot/_main/bazel-out/darwin_arm64-fastbuild/bin/app/app_bin.venv.runfiles/_main/app/.app_bin.venv -> /Users/joshua.bronson/clones/oss/shorty/.app+app_bin.venv
-
-Link is up to date!
-
-To configure the virtualenv in your IDE, configure an interpreter with the homedir
-    /Users/joshua.bronson/clones/oss/shorty/.app+app_bin.venv
-
-    Please note that you may encounter issues if your editor doesn't evaluate
-    the `activate` script. If you do please file an issue at
-    https://github.com/aspect-build/rules_py/issues/new?template=BUG-REPORT.yaml
-
-To activate the virtualenv in your shell run
-    source /Users/joshua.bronson/clones/oss/shorty/.app+app_bin.venv/bin/activate
-
-virtualenvwrapper users may further want to
-    $ ln -s /Users/joshua.bronson/clones/oss/shorty/.app+app_bin.venv $WORKON_HOME/.app+app_bin.venv
-
-bash-5.2$ source /Users/joshua.bronson/clones/oss/shorty/.app+app_bin.venv/bin/activate
+      Current thread 0x00000001f402e0c0 (most recent call first):
+        <no Python frame>
+      ---
 ```
-
-1st-party deps *are not* importable from within the venv:
+Deactivating doesn't help:
 ```
-bash-5.2$ python3 -P -m app
-/Users/joshua.bronson/clones/oss/shorty/tools/.app+app_bin.venv/bin/python3: No module named app
+$ deactivate
+$ bazel run //app:app_bin
+INFO: Analyzed target //app:app_bin (1 packages loaded, 5 targets configured).
+INFO: Found 1 target...
+Target //app:app_bin up-to-date:
+  bazel-bin/app/app_bin
+  bazel-bin/app/app_bin.venv.pth
+INFO: Elapsed time: 0.148s, Critical Path: 0.00s
+INFO: 1 process: 1 internal.
+INFO: Build completed successfully, 1 total action
+INFO: Running command line: bazel-bin/app/app_bin
+Error:   × Unable to run command:
+  ╰─▶ Querying Python at `/private/var/tmp/_bazel_joshua.bronson/3128aa25a1a2a07e424bf6a1e3476f9d/execroot/_main/bazel-out/darwin_arm64-fastbuild/bin/app/app_bin.runfiles/
+      rules_python++python+python_3_12_aarch64-apple-darwin/bin/python3` failed with exit status exit status: 1
+      --- stdout:
 
-bash-5.2$ python3 -P -c "import app.foo_lib"
-Traceback (most recent call last):
-  File "<string>", line 1, in <module>
-ModuleNotFoundError: No module named 'app'
+      --- stderr:
+      Could not find platform independent libraries <prefix>
+      Could not find platform dependent libraries <exec_prefix>
+      Python path configuration:
+        PYTHONHOME = (not set)
+        PYTHONPATH = (not set)
+        program name = '/private/var/tmp/_bazel_joshua.bronson/3128aa25a1a2a07e424bf6a1e3476f9d/execroot/_main/bazel-out/darwin_arm64-fastbuild/bin/app/app_bin.runfiles/
+      rules_python++python+python_3_12_aarch64-apple-darwin/bin/python3'
+        isolated = 1
+        environment = 0
+        user site = 0
+        safe_path = 1
+        import site = 1
+        is in build tree = 0
+        stdlib dir = '/install/lib/python3.12'
+        sys._base_executable = '/private/var/tmp/_bazel_joshua.bronson/3128aa25a1a2a07e424bf6a1e3476f9d/execroot/_main/bazel-out/darwin_arm64-fastbuild/bin/app/
+      app_bin.runfiles/rules_python++python+python_3_12_aarch64-apple-darwin/bin/python3'
+        sys.base_prefix = '/install'
+        sys.base_exec_prefix = '/install'
+        sys.platlibdir = 'lib'
+        sys.executable = '.app+app_bin.venv/bin/python'
+        sys.prefix = '/install'
+        sys.exec_prefix = '/install'
+        sys.path = [
+          '/install/lib/python312.zip',
+          '/install/lib/python3.12',
+          '/install/lib/python3.12/lib-dynload',
+        ]
+      Fatal Python error: init_fs_encoding: failed to get the Python codec of the filesystem encoding
+      Python runtime state: core initialized
+      ModuleNotFoundError: No module named 'encodings'
+
+      Current thread 0x00000001f402e0c0 (most recent call first):
+        <no Python frame>
 ```
-
-Note: You must either pass `-P` (for isolated mode) as above,
-or `cd` into a different directory before invoking `python3`
-to reproduce this.
-
-Otherwise Python adds `.` to the `PYTHONPATH`, so first-party imports
-may happen to work when the directory you're in has matching subdirectories.
-
-With standard Python virtualenvs, after you activate,
-first-party deps are importable even with `-P` / no matter what directory you're in.
